@@ -124,21 +124,6 @@ if st.button("🚀 Analyze Feeds"):
         except Exception as e:
             st.error(f"Could not parse feed {feed_url}. Error: {e}")
             
-    # Display results (this part remains the same)
-    st.subheader("Analysis Complete")
-    if not results:
-        st.info("No new matching articles found in the last week.")
-    else:
-        st.write(f"Found {len(results)} matching articles.")
-        st.dataframe(
-            results,
-            column_config={
-                "Link": st.column_config.LinkColumn("Link", display_text="🔗 Read Article")
-            },
-            use_container_width=True
-        )
-
-
     # 4. Display results in the app
     st.subheader("Analysis Complete")
     if not results:
@@ -153,6 +138,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
