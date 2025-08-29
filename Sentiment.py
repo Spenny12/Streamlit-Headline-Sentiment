@@ -103,7 +103,7 @@ if st.button("🚀 Analyze Feeds"):
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc) [cite: 11]
 
-                    if pub_date >= one_week_ago: [cite: 11]
+                    if pub_date >= one_week_ago:
                         # --- NEW LOGIC STARTS HERE ---
                         # Instead of looping through keywords, we make one call to Gemini.
                         matched_keyword = check_article_relevance(entry.title, initial_keywords, model)
@@ -153,6 +153,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
