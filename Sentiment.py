@@ -85,8 +85,8 @@ if st.button("🚀 Analyze Feeds"):
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
     except Exception as e:
-    st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
-    st.stop()
+        st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
+        st.stop()
     # Convert text area inputs to lists
     feeds = [feed.strip() for feed in feeds_input.split('\n') if feed.strip()]
     initial_keywords = [kw.strip() for kw in keywords_input.split('\n') if kw.strip()]
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
