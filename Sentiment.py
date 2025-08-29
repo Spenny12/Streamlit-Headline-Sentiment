@@ -67,8 +67,8 @@ with st.sidebar:
         
     gemini_api_key = st.text_input("Enter your Gemini API Key", type="password", value=default_key)
 
-    feeds_input = st.text_area("Enter RSS Feed URLs (one per line)", "http://feeds.bbci.co.uk/news/rss.xml\nhttps://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml", height=150)
-    keywords_input = st.text_area("Enter Keywords (one per line)", "NVIDIA\nArtificial Intelligence\nUK election", height=150)
+    feeds_input = st.text_area("Enter RSS Feed URLs (one per line)", height=150)
+    keywords_input = st.text_area("Enter Keywords (one per line)", height=150)
 
 # Main container for the app logic
 if not gemini_api_key:
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
