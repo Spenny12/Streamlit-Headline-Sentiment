@@ -114,7 +114,7 @@ if st.button("🚀 Analyze Feeds"):
                             sentiment = get_gemini_sentiment(entry.title, matched_keyword, model) [cite: 13]
                             st.write(f"    Sentiment: {sentiment}")
 
-                            results.append({ [cite: 13]
+                            results.append({
                                 "Headline": entry.title,
                                 "Link": entry.link,
                                 "Matched Keyword": matched_keyword,
@@ -153,6 +153,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
