@@ -1,37 +1,11 @@
 # app.py
 
 import streamlit as st
-import gspread
 import feedparser
 import google.generativeai as genai
 from datetime import datetime, timedelta, timezone
 
-# --- Core Logic Functions (Copied from your script, mostly unchanged) ---
-
-# This function is slightly modified to take credentials from Streamlit's secrets
-def setup_google_sheets():
-    """Authenticates with Google using Streamlit's secrets."""
-    try:
-        # Get credentials from st.secrets (more secure)
-        creds = st.secrets["google_sheets"]
-        gc = gspread.service_account_from_dict(creds)
-        
-        # Use a text input for the Sheet ID
-        sheet_id = st.text_input("Enter your Google Sheet ID", help="You can find this in the URL of your sheet.")
-        if not sheet_id:
-            st.info("Please enter a Google Sheet ID to proceed with sheet operations.")
-            return None, None
-            
-        sh = gc.open_by_key(sheet_id)
-        st.success(f"Successfully connected to Google Sheet: '{sh.title}'")
-        return sh
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"ERROR: Spreadsheet with ID '{sheet_id}' not found or not shared with the service account.")
-        return None
-    except Exception as e:
-        st.error(f"An error occurred during Google Sheets setup: {e}")
-        return None
-
+# --- Core Functions ---
 
 def expand_keywords_with_gemini(keywords, model):
     """Uses Gemini to expand a list of keywords into a list of semantic variations."""
@@ -161,3 +135,4 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
