@@ -1,4 +1,4 @@
-# app.pyF
+e# app.pyF
 
 import streamlit as st
 import feedparser
@@ -72,7 +72,7 @@ with st.sidebar:
 
 # Main container for the app logic
 if not gemini_api_key:
-    st.info("Please enter your Gemini API key in the sidebar to begin.")
+    st.info("Enter Gemini key to the left. Ask Tom if unsure or need the key.")
     st.stop()
 
 # Start analysis when the button is clicked
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
