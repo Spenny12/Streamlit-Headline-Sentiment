@@ -99,7 +99,7 @@ if st.button("🚀 Analyze Feeds"):
         status_area.write(f"Parsing feed: {feed_url}") [cite: 11]
         try:
             d = feedparser.parse(feed_url) [cite: 11]
-            for entry in d.entries: [cite: 11]
+            for entry in d.entries:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc) [cite: 11]
 
@@ -153,6 +153,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
