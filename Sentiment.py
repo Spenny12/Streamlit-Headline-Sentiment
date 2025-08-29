@@ -84,7 +84,7 @@ if st.button("🚀 Analyze Feeds"):
     except Exception as e:
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
-except Exception as e:
+    except Exception as e:
     st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
     st.stop()
     # Convert text area inputs to lists
@@ -148,6 +148,7 @@ except Exception as e:
             },
             use_container_width=True
         )
+
 
 
 
