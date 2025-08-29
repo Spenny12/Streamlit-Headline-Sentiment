@@ -95,7 +95,7 @@ if st.button("🚀 Analyze Feeds"):
     st.subheader("Processing Feeds...")
     status_area = st.container() 
 
-    for feed_url in feeds: [cite: 11]
+    for feed_url in feeds:
         status_area.write(f"Parsing feed: {feed_url}") [cite: 11]
         try:
             d = feedparser.parse(feed_url) [cite: 11]
@@ -153,5 +153,6 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
