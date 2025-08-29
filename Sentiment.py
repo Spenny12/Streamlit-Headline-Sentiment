@@ -7,31 +7,34 @@ from datetime import datetime, timedelta, timezone
 
 # --- Core Functions ---
 
-def expand_keywords_with_gemini(keywords, model):
-    """Uses Gemini to expand a list of keywords into a list of semantic variations."""
-    expanded_keywords = set()
-    st.write("Expanding keywords with Gemini for semantic search...") # Replaces print()
-    my_bar = st.progress(0)
-    for i, keyword in enumerate(keywords):
-        try:
-            prompt = f"""
-            Given the primary keyword, generate a short, comma-separated list of highly related terms, names, or common acronyms a news headline might use. Include the original keyword.
-            Example for "Donald Trump": Donald Trump, Trump
-            Example for "Artificial Intelligence": Artificial Intelligence, AI, machine learning
-            Primary Keyword: "{keyword}"
-            """
-            response = model.generate_content(prompt)
-            variations = [term.strip() for term in response.text.split(',')]
-            for var in variations:
-                if var:
-                    expanded_keywords.add(var)
-            st.text(f"  '{keyword}' -> {', '.join(variations)}") # Replaces print()
-        except Exception as e:
-            st.warning(f"Could not expand keyword '{keyword}' due to API error: {e}") # Replaces print()
-            expanded_keywords.add(keyword)
-        my_bar.progress((i + 1) / len(keywords))
+def check_article_relevance(headline, keywords, model):
+    """
+    Uses Gemini to determine if a headline is relevant to a list of user-defined keywords.
+    """
+    try:
+        # Create a comma-separated string of keywords for the prompt
+        keyword_str = ", ".join(keywords)
+        
+        prompt = f"""
+        Analyze the following headline and determine if it is directly about or highly related to any of these topics: {keyword_str}.
 
-    return list(expanded_keywords)
+        If it is related, respond with ONLY the topic from the list that it is most related to.
+        If it is not related to any of the topics, respond with ONLY the word "None".
+
+        Headline: "{headline}"
+        """
+        response = model.generate_content(prompt)
+        result = response.text.strip()
+
+        # If the result from Gemini is one of our keywords, it's a match.
+        if result in keywords:
+            return result # Return the matched keyword
+        else:
+            return None # Return None if Gemini says "None" or something unexpected
+            
+    except Exception as e:
+        st.error(f"Gemini API Error during relevance check: {e}")
+        return None
 
 
 def get_gemini_sentiment(headline, term, model):
@@ -72,10 +75,6 @@ if not gemini_api_key:
     st.info("Please enter your Gemini API key in the sidebar to begin.")
     st.stop()
 
-# Configure the Gemini API
-genai.configure(api_key=gemini_api_key)
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
-
 # Start analysis when the button is clicked
 if st.button("🚀 Analyze Feeds"):
     # Convert text area inputs to lists
@@ -86,39 +85,58 @@ if st.button("🚀 Analyze Feeds"):
         st.warning("Please provide at least one RSS feed and one keyword.")
         st.stop()
 
-    # Run the analysis logic
-    with st.spinner("Expanding keywords..."):
-        keywords = expand_keywords_with_gemini(initial_keywords, model)
-    st.success(f"Searching with {len(keywords)} total terms...")
+    # --- THIS SECTION IS REPLACED ---
+    # The call to expand_keywords_with_gemini is gone. We use initial_keywords directly.
+    st.success(f"Checking articles for relevance against your {len(initial_keywords)} topics...")
 
     results = []
     one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
     st.subheader("Processing Feeds...")
-    status_area = st.container() # Create a container to show progress
+    status_area = st.container() 
 
-    for feed_url in feeds:
-        status_area.write(f"Parsing feed: {feed_url}")
+    for feed_url in feeds: [cite: 11]
+        status_area.write(f"Parsing feed: {feed_url}") [cite: 11]
         try:
-            d = feedparser.parse(feed_url)
-            for entry in d.entries:
+            d = feedparser.parse(feed_url) [cite: 11]
+            for entry in d.entries: [cite: 11]
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
-                    if pub_date >= one_week_ago:
-                        headline_lower = entry.title.lower()
-                        for keyword in keywords:
-                            if keyword.lower() in headline_lower:
-                                sentiment = get_gemini_sentiment(entry.title, keyword, model)
-                                results.append({
-                                    "Headline": entry.title,
-                                    "Link": entry.link,
-                                    "Matched Keyword": keyword,
-                                    "Sentiment": sentiment,
-                                    "Date": pub_date.strftime('%Y-%m-%d')
-                                })
-                                break # Move to next article after first match
+                    pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc) [cite: 11]
+
+                    if pub_date >= one_week_ago: [cite: 11]
+                        # --- NEW LOGIC STARTS HERE ---
+                        # Instead of looping through keywords, we make one call to Gemini.
+                        matched_keyword = check_article_relevance(entry.title, initial_keywords, model)
+                        
+                        if matched_keyword:
+                            # If a relevant keyword was returned, proceed with sentiment analysis
+                            st.write(f"  Found Relevant Article: '{entry.title}' (Topic: {matched_keyword})")
+                            sentiment = get_gemini_sentiment(entry.title, matched_keyword, model) [cite: 13]
+                            st.write(f"    Sentiment: {sentiment}")
+
+                            results.append({ [cite: 13]
+                                "Headline": entry.title,
+                                "Link": entry.link,
+                                "Matched Keyword": matched_keyword,
+                                "Sentiment": sentiment,
+                                "Date": pub_date.strftime('%Y-%m-%d')
+                            })
         except Exception as e:
             st.error(f"Could not parse feed {feed_url}. Error: {e}")
+            
+    # Display results (this part remains the same)
+    st.subheader("Analysis Complete")
+    if not results:
+        st.info("No new matching articles found in the last week.")
+    else:
+        st.write(f"Found {len(results)} matching articles.")
+        st.dataframe(
+            results,
+            column_config={
+                "Link": st.column_config.LinkColumn("Link", display_text="🔗 Read Article")
+            },
+            use_container_width=True
+        )
 
 
     # 4. Display results in the app
@@ -135,4 +153,5 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
