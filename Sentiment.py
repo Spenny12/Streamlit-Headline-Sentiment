@@ -65,7 +65,7 @@ with st.sidebar:
     except (FileNotFoundError, KeyError):
         default_key = ""
         
-    gemini_api_key = st.text_input("Enter your Gemini API Key", type="password", value=default_key)
+    gemini_api_key = st.text_input("Enter your Gemini API Key", "ask Tom if unsure", type="password", value=default_key)
 
     feeds_input = st.text_area("Enter RSS Feed URLs (one per line)", height=150)
     keywords_input = st.text_area("Enter Keywords (one per line)", height=150)
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
