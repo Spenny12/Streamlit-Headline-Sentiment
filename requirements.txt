@@ -1,5 +1,5 @@
 streamlit
-gspread
 feedparser
 google-generativeai
+
 python-dateutil
