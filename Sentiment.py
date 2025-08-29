@@ -96,12 +96,12 @@ if st.button("🚀 Analyze Feeds"):
     status_area = st.container() 
 
     for feed_url in feeds:
-        status_area.write(f"Parsing feed: {feed_url}") [cite: 11]
+        status_area.write(f"Parsing feed: {feed_url}")
         try:
-            d = feedparser.parse(feed_url) [cite: 11]
+            d = feedparser.parse(feed_url)
             for entry in d.entries:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc) [cite: 11]
+                    pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
 
                     if pub_date >= one_week_ago:
                         # --- NEW LOGIC STARTS HERE ---
@@ -111,7 +111,7 @@ if st.button("🚀 Analyze Feeds"):
                         if matched_keyword:
                             # If a relevant keyword was returned, proceed with sentiment analysis
                             st.write(f"  Found Relevant Article: '{entry.title}' (Topic: {matched_keyword})")
-                            sentiment = get_gemini_sentiment(entry.title, matched_keyword, model) [cite: 13]
+                            sentiment = get_gemini_sentiment(entry.title, matched_keyword, model)
                             st.write(f"    Sentiment: {sentiment}")
 
                             results.append({
@@ -153,6 +153,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
