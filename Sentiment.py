@@ -77,6 +77,13 @@ if not gemini_api_key:
 
 # Start analysis when the button is clicked
 if st.button("🚀 Analyze Feeds"):
+# The user's key is stored in the 'gemini_api_key' variable
+try:
+    genai.configure(api_key=gemini_api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+except Exception as e:
+    st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
+    st.stop()
     # Convert text area inputs to lists
     feeds = [feed.strip() for feed in feeds_input.split('\n') if feed.strip()]
     initial_keywords = [kw.strip() for kw in keywords_input.split('\n') if kw.strip()]
@@ -138,6 +145,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
