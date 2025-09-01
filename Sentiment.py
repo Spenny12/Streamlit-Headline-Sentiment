@@ -41,7 +41,7 @@ def get_gemini_sentiment(headline, term, model):
     """Performs sentiment analysis using the Gemini API."""
     try:
         prompt = f"""
-        Analyze the sentiment of the following headline strictly in relation to the term '{term}'. Is the headline positive, negative, or neutral about '{term}'?
+        Analyse the sentiment of the following headline strictly in relation to the term '{term}'. Is the headline positive, negative, or neutral about '{term}'?
         Answer with only one word: Positive, Negative, or Neutral. Headline: "{headline}"
         """
         response = model.generate_content(prompt)
@@ -53,7 +53,7 @@ def get_gemini_sentiment(headline, term, model):
 # --- Streamlit UI and Main Application Flow ---
 
 st.set_page_config(layout="wide", page_title="Headline Sentiment Analyzer")
-st.title("📰 Headline Sentiment Analyzer")
+st.title("📰 Headline Sentiment Analyser")
 
 # 1. User Inputs in the Sidebar
 with st.sidebar:
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
