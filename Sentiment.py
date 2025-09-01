@@ -52,7 +52,7 @@ def get_gemini_sentiment(headline, term, model):
 
 # --- Streamlit UI and Main Application Flow ---
 
-st.set_page_config(layout="wide", page_title="Headline Sentiment Analyzer")
+st.set_page_config(layout="wide", page_title="Headline Sentiment Analyser")
 st.title("📰 Headline Sentiment Analyser")
 
 # 1. User Inputs in the Sidebar
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
