@@ -16,7 +16,7 @@ def check_article_relevance(headline, keywords, model):
         keyword_str = ", ".join(keywords)
         
         prompt = f"""
-        Analyze the following headline and determine if it is directly about or highly related to any of these topics: {keyword_str}.
+        Analyse the following headline and determine if it is directly about or related to any of these topics: {keyword_str}.
 
         If it is related, respond with ONLY the topic from the list that it is most related to.
         If it is not related to any of the topics, respond with ONLY the word "None".
@@ -100,7 +100,7 @@ if st.button("🚀 Analyze Feeds"):
     st.success(f"Checking articles for relevance against your {len(initial_keywords)} topics...")
 
     results = []
-    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    two_weeks_ago = datetime.now(timezone.utc) - timedelta(days=14)
 
     st.subheader("Processing Feeds...")
     status_area = st.container() 
@@ -113,7 +113,7 @@ if st.button("🚀 Analyze Feeds"):
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
 
-                    if pub_date >= one_week_ago:
+                    if pub_date >= two_weeks_ago:
                         # --- NEW LOGIC STARTS HERE ---
                         # Instead of looping through keywords, we make one call to Gemini.
                         matched_keyword = check_article_relevance(entry.title, initial_keywords, model)
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
