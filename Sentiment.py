@@ -80,7 +80,7 @@ if st.button("🚀 Analyze Feeds"):
 
     try:
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception as e:
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
@@ -148,6 +148,7 @@ if st.button("🚀 Analyze Feeds"):
             },
             use_container_width=True
         )
+
 
 
 
