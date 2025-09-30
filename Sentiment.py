@@ -76,7 +76,7 @@ if not gemini_api_key:
     st.stop()
 
 # Start analysis when the button is clicked
-if st.button("Analyze Feeds"):
+if st.button("Analyse Feeds"):
 
     try:
         genai.configure(api_key=gemini_api_key)
