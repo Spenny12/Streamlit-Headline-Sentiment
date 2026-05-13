@@ -1,93 +1,139 @@
-# app.pyF
+# app.py
 
 import streamlit as st
 import feedparser
 import google.generativeai as genai
+import json
+import pandas as pd
 from datetime import datetime, timedelta, timezone
+from dateutil.relativedelta import relativedelta
 
 # --- Core Functions ---
 
-def check_article_relevance(headline, keywords, model):
-    """
-    Uses Gemini to determine if a headline is relevant to a list of user-defined keywords.
-    """
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_and_parse_feed(url):
+    """Fetches and parses an RSS feed, caching the results for 1 hour."""
     try:
-        # Create a comma-separated string of keywords for the prompt
-        keyword_str = ", ".join(keywords)
-        
-        prompt = f"""
-        Analyse the following headline and determine if it is directly about or related to any of these topics: {keyword_str}.
-
-        If it is related, respond with ONLY the topic from the list that it is most related to.
-        If it is not related to any of the topics, respond with ONLY the word "None".
-
-        Headline: "{headline}"
-        """
-        response = model.generate_content(prompt)
-        result = response.text.strip()
-
-        # If the result from Gemini is one of our keywords, it's a match.
-        if result in keywords:
-            return result # Return the matched keyword
-        else:
-            return None # Return None if Gemini says "None" or something unexpected
-            
+        d = feedparser.parse(url)
+        entries = []
+        for entry in d.entries:
+            if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                entries.append({
+                    'title': entry.title,
+                    'link': entry.link,
+                    'published_parsed': entry.published_parsed
+                })
+        return entries
     except Exception as e:
-        st.error(f"Gemini API Error during relevance check: {e}")
-        return None
+        st.error(f"Could not parse feed {url}. Error: {e}")
+        return []
 
+def analyze_headlines_batch(headlines_chunk, keywords, model):
+    """
+    Uses Gemini to determine relevance and sentiment for a batch of headlines in one API call.
+    Expects a list of dictionaries with 'id' and 'headline'.
+    """
+    keyword_str = ", ".join(keywords)
 
-def get_gemini_sentiment(headline, term, model):
-    """Performs sentiment analysis using the Gemini API."""
+    prompt = f"""
+    You are an analytical JSON API. Analyze the following list of headlines against these topics: {keyword_str}.
+
+    For each headline, determine:
+    1. 'matched_keyword': The topic it is most related to (strictly choose from the list). If none, output null.
+    2. 'sentiment': If a topic matched, is the headline 'Positive', 'Negative', or 'Neutral' about that topic? If no topic matched, output null.
+
+    Headlines to analyze:
+    """
+
+    for item in headlines_chunk:
+        prompt += f"\nID: {item['id']} | Headline: \"{item['headline']}\""
+
+    prompt += """
+
+    Return ONLY a valid JSON array of objects. Do not include markdown formatting blocks like ```json.
+    Format exactly like this:
+    [
+      {"id": 0, "matched_keyword": "Topic 1", "sentiment": "Positive"},
+      {"id": 1, "matched_keyword": null, "sentiment": null}
+    ]
+    """
+
     try:
-        prompt = f"""
-        Analyse the sentiment of the following headline strictly in relation to the term '{term}'. Is the headline positive, negative, or neutral about '{term}'?
-        Answer with only one word: Positive, Negative, or Neutral. Headline: "{headline}"
-        """
         response = model.generate_content(prompt)
-        return response.text.strip()
+        text = response.text.strip()
+
+        # Clean up potential markdown formatting from the LLM response
+        if text.startswith('```json'):
+            text = text[7:-3].strip()
+        elif text.startswith('```'):
+            text = text[3:-3].strip()
+
+        return json.loads(text)
+    except json.JSONDecodeError:
+        st.error("Failed to parse Gemini output as JSON. Retrying or skipping batch might be needed.")
+        return []
     except Exception as e:
-        st.error(f"Gemini API Error: {e}") # Replaces print()
-        return "API Error"
+        st.error(f"Gemini API Error during batch processing: {e}")
+        return []
 
 # --- Streamlit UI and Main Application Flow ---
 
 st.set_page_config(layout="wide", page_title="Headline Sentiment Analyser")
-st.title("📰 Headline Sentiment Analyser")
+st.title("Headline Sentiment Analyser")
 
 # 1. User Inputs in the Sidebar
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    # Use st.secrets for the API key if available, otherwise use text_input
+    st.header("Configuration")
+
     try:
         default_key = st.secrets["gemini"]["api_key"]
     except (FileNotFoundError, KeyError):
         default_key = ""
-        
+
     gemini_api_key = st.text_input("Enter your Gemini API Key", type="password", value=default_key)
 
     feeds_input = st.text_area("Enter RSS Feed URLs (one per line)", height=150)
     keywords_input = st.text_area("Enter Keywords (one per line)", height=150)
 
-# Main container for the app logic
+    st.header("Date Range Settings")
+    time_options = ["Last 1 Week", "Last 1 Month", "Last 3 Months", "Last 6 Months", "Last 12 Months", "Custom Date Range"]
+    selected_time = st.selectbox("Select Time Range", time_options)
+
+    # Date range calculations
+    end_datetime = datetime.now(timezone.utc)
+
+    if selected_time == "Custom Date Range":
+        col1, col2 = st.columns(2)
+        start_date = col1.date_input("Start Date", end_datetime.date() - timedelta(days=14))
+        end_date = col2.date_input("End Date", end_datetime.date())
+
+        start_datetime = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end_datetime = datetime.combine(end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+    else:
+        if selected_time == "Last 1 Week":
+            start_datetime = end_datetime - timedelta(weeks=1)
+        elif selected_time == "Last 1 Month":
+            start_datetime = end_datetime - relativedelta(months=1)
+        elif selected_time == "Last 3 Months":
+            start_datetime = end_datetime - relativedelta(months=3)
+        elif selected_time == "Last 6 Months":
+            start_datetime = end_datetime - relativedelta(months=6)
+        elif selected_time == "Last 12 Months":
+            start_datetime = end_datetime - relativedelta(months=12)
+
 if not gemini_api_key:
     st.info("Enter Gemini key to the left. Ask Tom if unsure or need the key.")
     st.stop()
 
-# Start analysis when the button is clicked
 if st.button("Analyse Feeds"):
-
     try:
         genai.configure(api_key=gemini_api_key)
+        # Using flash model as it is faster and cheaper for batch classification
         model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception as e:
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
-    except Exception as e:
-        st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
-        st.stop()
-    # Convert text area inputs to lists
+
     feeds = [feed.strip() for feed in feeds_input.split('\n') if feed.strip()]
     initial_keywords = [kw.strip() for kw in keywords_input.split('\n') if kw.strip()]
 
@@ -95,76 +141,93 @@ if st.button("Analyse Feeds"):
         st.warning("Please provide at least one RSS feed and one keyword.")
         st.stop()
 
-    # --- THIS SECTION IS REPLACED ---
-    # The call to expand_keywords_with_gemini is gone. We use initial_keywords directly.
-    st.success(f"Checking articles for relevance against your {len(initial_keywords)} topics...")
+    st.success(f"Fetching articles from {start_datetime.strftime('%Y-%m-%d')} to {end_datetime.strftime('%Y-%m-%d')}...")
 
-    results = []
-    two_weeks_ago = datetime.now(timezone.utc) - timedelta(days=14)
+    # Step 1: Collect and filter all headlines from cached feeds
+    headlines_to_process = []
+    current_id = 0
 
-    st.subheader("Processing Feeds...")
-    status_area = st.container() 
+    with st.spinner("Downloading and filtering RSS feeds..."):
+        for feed_url in feeds:
+            entries = fetch_and_parse_feed(feed_url)
+            for entry in entries:
+                pub_date = datetime(*entry['published_parsed'][:6], tzinfo=timezone.utc)
+                if start_datetime <= pub_date <= end_datetime:
+                    headlines_to_process.append({
+                        "id": current_id,
+                        "headline": entry['title'],
+                        "link": entry['link'],
+                        "date": pub_date.strftime('%Y-%m-%d')
+                    })
+                    current_id += 1
 
-    for feed_url in feeds:
-        status_area.write(f"Parsing feed: {feed_url}")
-        try:
-            d = feedparser.parse(feed_url)
-            for entry in d.entries:
-                if hasattr(entry, 'published_parsed') and entry.published_parsed:
-                    pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+    st.info(f"Found {len(headlines_to_process)} articles in the date range. Starting AI Analysis in batches...")
 
-                    if pub_date >= two_weeks_ago:
-                        # --- NEW LOGIC STARTS HERE ---
-                        # Instead of looping through keywords, we make one call to Gemini.
-                        matched_keyword = check_article_relevance(entry.title, initial_keywords, model)
-                        
-                        if matched_keyword:
-                            # If a relevant keyword was returned, proceed with sentiment analysis
-                            st.write(f"  Found Relevant Article: '{entry.title}' (Topic: {matched_keyword})")
-                            sentiment = get_gemini_sentiment(entry.title, matched_keyword, model)
-                            st.write(f"    Sentiment: {sentiment}")
+    # Step 2: Process in batches of 20
+    BATCH_SIZE = 20
+    final_results = []
 
-                            results.append({
-                                "Headline": entry.title,
-                                "Link": entry.link,
-                                "Matched Keyword": matched_keyword,
-                                "Sentiment": sentiment,
-                                "Date": pub_date.strftime('%Y-%m-%d')
-                            })
-        except Exception as e:
-            st.error(f"Could not parse feed {feed_url}. Error: {e}")
-            
-    # 4. Display results in the app
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    for i in range(0, len(headlines_to_process), BATCH_SIZE):
+        batch = headlines_to_process[i:i + BATCH_SIZE]
+        status_text.write(f"Analyzing batch {i//BATCH_SIZE + 1} of {(len(headlines_to_process)-1)//BATCH_SIZE + 1}...")
+
+        batch_results = analyze_headlines_batch(batch, initial_keywords, model)
+
+        # Map AI results back to the original headline data
+        for res in batch_results:
+            if res.get("matched_keyword"): # If not null
+                original_item = next((item for item in batch if item["id"] == res["id"]), None)
+                if original_item:
+                    final_results.append({
+                        "Headline": original_item["headline"],
+                        "Link": original_item["link"],
+                        "Matched Keyword": res["matched_keyword"],
+                        "Sentiment": res["sentiment"],
+                        "Date": original_item["date"]
+                    })
+
+        # Update progress bar
+        progress = min(1.0, (i + BATCH_SIZE) / len(headlines_to_process))
+        progress_bar.progress(progress)
+
+    status_text.empty() # Clear the status text
+
+    # Step 3: Display Results, Visualizations, and Export
     st.subheader("Analysis Complete")
-    if not results:
-        st.info("No new matching articles found in the last week.")
+
+    if not final_results:
+        st.info("No matching articles found based on your keywords in the selected date range.")
     else:
-        st.write(f"Found {len(results)} matching articles.")
-        # Use st.dataframe to show results in a nice table
-        st.dataframe(
-            results,
-            column_config={
-                "Link": st.column_config.LinkColumn("Link", display_text="🔗 Read Article")
-            },
-            use_container_width=True
-        )
+        st.write(f"Found **{len(final_results)}** highly relevant articles.")
 
+        df = pd.DataFrame(final_results)
 
+        # Create columns for the table and the chart
+        col_table, col_chart = st.columns([2, 1])
 
+        with col_table:
+            st.dataframe(
+                df,
+                column_config={
+                    "Link": st.column_config.LinkColumn("Link", display_text="🔗 Read Article")
+                },
+                use_container_width=True
+            )
 
+            # CSV Download Button
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Results as CSV",
+                data=csv,
+                file_name=f'sentiment_analysis_{datetime.now().strftime("%Y%m%d")}.csv',
+                mime='text/csv',
+            )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        with col_chart:
+            st.write("**Sentiment Breakdown**")
+            # Count sentiments and plot
+            sentiment_counts = df['Sentiment'].value_counts()
+            st.bar_chart(sentiment_counts, color="#1E90FF")

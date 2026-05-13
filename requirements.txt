@@ -2,4 +2,4 @@ streamlit
 feedparser
 google-generativeai
 python-dateutil
-
+pandas
