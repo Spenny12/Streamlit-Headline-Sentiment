@@ -129,7 +129,7 @@ if st.button("Analyse Feeds"):
     try:
         genai.configure(api_key=gemini_api_key)
         # Using flash model as it is faster and cheaper for batch classification
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.1-flash-lite')
     except Exception as e:
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
