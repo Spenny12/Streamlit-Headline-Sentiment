@@ -31,12 +31,12 @@ def fetch_and_parse_feed(url):
 def analyze_headlines_batch(headlines_chunk, keywords, model):
     """
     Uses Gemini to determine relevance and sentiment for a batch of headlines in one API call.
-    Expects a list of dictionaries with 'id' and 'headline'.
+    Uses native JSON mode for speed and reliability.
     """
     keyword_str = ", ".join(keywords)
 
     prompt = f"""
-    You are an analytical JSON API. Analyze the following list of headlines against these topics: {keyword_str}.
+    Analyze the following list of headlines against these topics: {keyword_str}.
 
     For each headline, determine:
     1. 'matched_keyword': The topic it is most related to (strictly choose from the list). If none, output null.
@@ -50,27 +50,18 @@ def analyze_headlines_batch(headlines_chunk, keywords, model):
 
     prompt += """
 
-    Return ONLY a valid JSON array of objects. Do not include markdown formatting blocks like ```json.
-    Format exactly like this:
-    [
-      {"id": 0, "matched_keyword": "Topic 1", "sentiment": "Positive"},
-      {"id": 1, "matched_keyword": null, "sentiment": null}
-    ]
+    Output a JSON array of objects with the keys "id", "matched_keyword", and "sentiment".
     """
 
     try:
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-
-        # Clean up potential markdown formatting from the LLM response
-        if text.startswith('```json'):
-            text = text[7:-3].strip()
-        elif text.startswith('```'):
-            text = text[3:-3].strip()
-
-        return json.loads(text)
+        # Force native JSON output for faster, guaranteed formatting
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        return json.loads(response.text)
     except json.JSONDecodeError:
-        st.error("Failed to parse Gemini output as JSON. Retrying or skipping batch might be needed.")
+        st.error("Failed to parse JSON. Skipping this batch.")
         return []
     except Exception as e:
         st.error(f"Gemini API Error during batch processing: {e}")
@@ -79,11 +70,11 @@ def analyze_headlines_batch(headlines_chunk, keywords, model):
 # --- Streamlit UI and Main Application Flow ---
 
 st.set_page_config(layout="wide", page_title="Headline Sentiment Analyser")
-st.title("Headline Sentiment Analyser")
+st.title("📰 Headline Sentiment Analyser")
 
 # 1. User Inputs in the Sidebar
 with st.sidebar:
-    st.header("Configuration")
+    st.header("⚙️ Configuration")
 
     try:
         default_key = st.secrets["gemini"]["api_key"]
@@ -95,7 +86,7 @@ with st.sidebar:
     feeds_input = st.text_area("Enter RSS Feed URLs (one per line)", height=150)
     keywords_input = st.text_area("Enter Keywords (one per line)", height=150)
 
-    st.header("Date Range Settings")
+    st.header("📅 Date Range Settings")
     time_options = ["Last 1 Week", "Last 1 Month", "Last 3 Months", "Last 6 Months", "Last 12 Months", "Custom Date Range"]
     selected_time = st.selectbox("Select Time Range", time_options)
 
@@ -128,8 +119,7 @@ if not gemini_api_key:
 if st.button("Analyse Feeds"):
     try:
         genai.configure(api_key=gemini_api_key)
-        # Using flash model as it is faster and cheaper for batch classification
-        model = genai.GenerativeModel('gemini-3.1-flash-lite')
+        model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception as e:
         st.error(f"Failed to configure Gemini API. Please check your key. Error: {e}")
         st.stop()
@@ -163,8 +153,8 @@ if st.button("Analyse Feeds"):
 
     st.info(f"Found {len(headlines_to_process)} articles in the date range. Starting AI Analysis in batches...")
 
-    # Step 2: Process in batches of 20
-    BATCH_SIZE = 20
+    # Step 2: Process in batches (Reduced to 10 for better stability)
+    BATCH_SIZE = 10
     final_results = []
 
     progress_bar = st.progress(0)
