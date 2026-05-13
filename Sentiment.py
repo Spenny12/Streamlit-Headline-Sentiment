@@ -70,11 +70,11 @@ def analyze_headlines_batch(headlines_chunk, keywords, model):
 # --- Streamlit UI and Main Application Flow ---
 
 st.set_page_config(layout="wide", page_title="Headline Sentiment Analyser")
-st.title("📰 Headline Sentiment Analyser")
+st.title("Headline Sentiment Analyser")
 
 # 1. User Inputs in the Sidebar
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("Configuration")
 
     try:
         default_key = st.secrets["gemini"]["api_key"]
@@ -162,7 +162,7 @@ if st.button("Analyse Feeds"):
 
     for i in range(0, len(headlines_to_process), BATCH_SIZE):
         batch = headlines_to_process[i:i + BATCH_SIZE]
-        status_text.write(f"Analyzing batch {i//BATCH_SIZE + 1} of {(len(headlines_to_process)-1)//BATCH_SIZE + 1}...")
+        status_text.write(f"Analysing batch {i//BATCH_SIZE + 1} of {(len(headlines_to_process)-1)//BATCH_SIZE + 1}...")
 
         batch_results = analyze_headlines_batch(batch, initial_keywords, model)
 
